@@ -93,10 +93,10 @@
   };
 
   // Faint drifting clouds that visualize the wind (speed + direction).
-  const clouds = [0, 1, 2].map(() => ({
+  const clouds = [0, 1, 2, 3].map(() => ({
     x: Math.random() * VW,
-    y: 22 + Math.random() * 90,
-    s: 0.7 + Math.random() * 0.9
+    y: 20 + Math.random() * 95,
+    s: 0.8 + Math.random() * 0.9
   }));
 
   // A friend's shared link carries the winning score as ?c=A-B; show it
@@ -202,9 +202,14 @@
 
     // Arrow keys only steer while it's a player's turn to aim.
     if (game.state !== STATE.WAITING) return;
+    // Left = rotate the aim counter-clockwise, Right = clockwise, matching
+    // what you see on screen. Player 2's angle is mirrored (effAngle =
+    // 180 - angle), so the same visual rotation means the opposite change to
+    // the raw slider value.
+    const ccw = game.current === 0 ? +1 : -1; // slider delta for CCW
     switch (k) {
-      case "ArrowLeft":  nudge(el.angle, -1); break;
-      case "ArrowRight": nudge(el.angle, +1); break;
+      case "ArrowLeft":  nudge(el.angle, ccw); break;
+      case "ArrowRight": nudge(el.angle, -ccw); break;
       case "ArrowUp":    nudge(el.velocity, +1); break;
       case "ArrowDown":  nudge(el.velocity, -1); break;
       default: return;
@@ -633,7 +638,7 @@
       [6, -4, 7], [-6, -4, 7], [22, 3, 6], [-22, 3, 6]
     ];
     ctx.save();
-    ctx.fillStyle = "rgba(105,105,120,0.20)";
+    ctx.fillStyle = "rgba(120,120,140,0.32)";
     ctx.beginPath();
     for (const [dx, dy, r] of puffs) {
       const cx = x + dx * s, cy = y + dy * s, rr = r * s;
