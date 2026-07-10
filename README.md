@@ -1,71 +1,112 @@
+<div align="center">
+
+<img src="og-image.png" alt="Banana Battle" width="820" />
+
 # 🍌 Banana Battle
 
-A retro, DOS-style **artillery duel** for two players — inspired by the classic
-QBasic *Gorillas* game, but built entirely from scratch with original code and
-artwork. Lob bananas across a destructible skyline and try to knock out your
-opponent.
+### A retro artillery duel — lob bananas across a destructible city skyline and knock your rival off the rooftops.
 
-It runs in the browser (built for **iPhone Safari**, works on desktop too) and
-can be saved to your iPhone **Home Screen** as a full-screen web app.
+**Two players. One phone. Total banana warfare.**
 
-![Banana Battle](icon.png)
+### ▶️ **[PLAY NOW → michael480th.github.io/Banana-Battle](https://michael480th.github.io/Banana-Battle/)**
 
-## How to play
+`Free` &nbsp;·&nbsp; `No install` &nbsp;·&nbsp; `No accounts` &nbsp;·&nbsp; `Works on iPhone & desktop`
 
-1. **Player 1** sets an **Angle** and **Power** with the sliders.
-2. Watch the **Wind** (arrow at the bottom) — it pushes the banana sideways.
-3. Tap **THROW**.
-4. The banana flies in an arc. It can smash a chunk out of a building, sail off
-   the screen, or hit the other gorilla.
-5. Hit the opponent and you **win the round**. Otherwise it's the other
-   player's turn.
-6. Tap **NEW ROUND** for a fresh skyline. Scores are saved automatically.
+</div>
 
-Turn your phone **sideways** for a wider, roomier view — the layout switches to
-put the game on the left and the controls on the right.
+---
 
-## Play it on your iPhone (GitHub Pages)
+## 🎮 What is it?
 
-This repo is a plain static site (HTML/CSS/JS, no build step), so GitHub Pages
-can serve it directly.
+Banana Battle is a love letter to the classic DOS/QBasic **Gorillas** game — rebuilt from scratch for your phone. Take turns hurling exploding bananas over a randomly generated pixel skyline, blasting craters through skyscrapers until someone lands a direct hit. Mind the **wind**. Best of the buildings you can carve a tunnel through. First to **3 wins** takes the match.
 
-1. Push these files to GitHub (they're at the repository root).
-2. In the repo, go to **Settings → Pages**.
-3. Under **Build and deployment → Source**, choose **Deploy from a branch**.
-4. Pick the branch that has this code and the **`/ (root)`** folder, then
-   **Save**.
-   - Easiest: merge this branch into **`main`** and serve from `main` / root.
-   - Or serve directly from the `claude/gorillas-iphone-game-05iuyn` branch.
-5. Wait a minute, then open the URL GitHub gives you (looks like
-   `https://<your-username>.github.io/banana-battle/`) in **Safari** on your
-   iPhone.
-6. Tap the **Share** button → **Add to Home Screen** to install it as a
-   full-screen app with its own icon.
+It runs entirely in your browser, plays great on **iPhone Safari**, and installs to your **Home Screen** like a real app — all from a single static page with no downloads, no sign-ups, and no ads.
 
-## Files
+<div align="center">
+
+<img src="screenshots/mobile.png" alt="Banana Battle gameplay on mobile" width="300" />
+&nbsp;&nbsp;
+<img src="screenshots/victory.png" alt="Victory screen with share" width="440" />
+
+<sub>Aim with the sliders (or arrow keys), watch the wind, and blast through the city. Win the match and challenge a friend.</sub>
+
+<br/><br/>
+
+<img src="screenshots/landscape.png" alt="Widescreen landscape mode" width="760" />
+
+<sub>Turn your phone sideways for a widescreen battlefield.</sub>
+
+</div>
+
+---
+
+## ✨ Features
+
+- 🍌 **Ballistic banana warfare** — angle + power + wind, with a live on-screen aim arrow so every shot is a real decision.
+- 🏙️ **Fully destructible skyline** — explosions carve real holes; chew a tunnel clean through a tower to reach your rival.
+- 🌬️ **Wind you can *see*** — faint clouds drift across the sky at the speed and direction of the wind.
+- 🏆 **Match play** — first to 3 round wins, ending on a confetti-soaked victory screen.
+- 📲 **One-tap sharing** — brag your win straight to a friend via the native share sheet; they get a personalized "beat my score" challenge link.
+- 🕹️ **Plays your way** — touch sliders on mobile, or **← → angle · ↑ ↓ power · Space to throw** on a keyboard.
+- 📱 **Add to Home Screen** — installs as a full-screen web app with its own icon.
+- 🎨 **Pure retro** — 640×350 virtual canvas, crisp pixel rendering, DOS-style 16-color palette. No libraries, no assets — every pixel is drawn in code.
+
+---
+
+## 🕹️ How to play
+
+1. **Player 1** sets an **angle** and **power** — with the sliders, or the **arrow keys** on a laptop.
+2. Check the **wind** — the clouds and the arrow show which way (and how hard) your banana will drift.
+3. **THROW** (or press **Space**).
+4. The banana arcs across the city. It can smash a crater in a building, sail off-screen, or nail the other gorilla.
+5. A direct hit **wins the round**; otherwise it's your opponent's turn.
+6. First player to **3 rounds** wins the **match** — then **share your victory** and challenge a friend. 🍌
+
+> **Tip:** Each player's aim is remembered separately, so you can fine-tune from your last shot instead of re-dialing every turn.
+
+---
+
+## 📲 Add it to your iPhone Home Screen
+
+1. Open **[the game](https://michael480th.github.io/Banana-Battle/)** in **Safari**.
+2. Tap the **Share** button → **Add to Home Screen**.
+3. Launch it from your Home Screen — it opens full-screen with its own banana icon, just like a native app.
+
+---
+
+## 🛠️ Built with
+
+Plain **HTML + CSS + JavaScript** on the **Canvas API** — no frameworks, no build step, no dependencies. The whole game is one static page you can host anywhere.
+
+<details>
+<summary>A few technical highlights</summary>
+
+<br/>
+
+- **Fixed 640×350 virtual canvas** (VGA-ish), scaled to any screen while preserving aspect ratio, with `image-rendering: pixelated` for the crisp retro look.
+- **Truly destructible terrain** — buildings are painted to an offscreen canvas; explosions erase pixels with `globalCompositeOperation = "destination-out"`, and collision is done by sampling that canvas's alpha, so holes are real geometry you can fly through.
+- **Frame-based ballistic physics** with gravity and wind, sub-stepped so fast bananas can't tunnel through thin buildings.
+- **Web Share API** for native mobile sharing, with a clipboard fallback on desktop, plus Open Graph tags for rich link previews.
+- **Progressive Web App** manifest + icon for Home Screen install.
 
 | File | Purpose |
 |------|---------|
-| `index.html`  | Page markup, canvas, and touch controls |
-| `styles.css`  | Pixel-crisp scaling, portrait + landscape layouts |
-| `game.js`     | Game loop, physics, destructible terrain, rendering |
-| `manifest.json` | PWA manifest for "Add to Home Screen" |
-| `icon.png`    | 512×512 app / Home Screen icon |
+| `index.html` | Page markup, canvas, touch controls, meta tags |
+| `styles.css` | Pixel-crisp scaling, portrait + landscape layouts |
+| `game.js` | Game loop, physics, destructible terrain, rendering, sharing |
+| `manifest.json` | PWA manifest for Add to Home Screen |
+| `icon.png` / `og-image.png` | App icon and social share image |
 
-## Technical notes
+</details>
 
-- Fixed **640 × 350** virtual canvas (VGA-ish), scaled to fit any screen while
-  preserving the aspect ratio, with `image-rendering: pixelated` for the crisp
-  retro look.
-- Buildings are painted onto an **offscreen terrain canvas**. Explosions carve
-  holes with `globalCompositeOperation = "destination-out"`, and collision is
-  done by sampling that canvas's alpha — so destruction is truly destructible.
-- Simple frame-based **ballistic physics** with gravity and wind, sub-stepped so
-  fast bananas can't tunnel through thin buildings.
-- No external assets or libraries — everything is generated in code.
+---
 
-## Credit
+## 📜 Credit
 
-Original game concept popularized by *Gorillas* (Microsoft QBasic, 1991). This
-is an independent, from-scratch recreation and does not use any of the original
-code, assets, or trademarked material.
+Inspired by *Gorillas* (Microsoft QBasic, 1991). Banana Battle is an independent, from-scratch recreation with original code and artwork — it uses none of the original game's code, assets, title, or trademarked material.
+
+<div align="center">
+
+**[🍌 Play Banana Battle →](https://michael480th.github.io/Banana-Battle/)**
+
+</div>
