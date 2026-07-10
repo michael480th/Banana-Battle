@@ -76,7 +76,13 @@
     explosion: null,
     sun: { x: VW / 2, y: 30, r: 12, shocked: 0 },
     winner: -1,
-    titleT: 0
+    titleT: 0,
+    // Each player keeps their own last-used aim so the sliders snap back
+    // to where they left off when the turn returns to them.
+    aim: [
+      { angle: 45, velocity: 60 },
+      { angle: 45, velocity: 60 }
+    ]
   };
 
   // Persisted scores
@@ -97,13 +103,45 @@
     newRoundBtn: document.getElementById("newRoundButton")
   };
 
+  // Persisted per-player aim (so each player's last angle/power is remembered)
+  try {
+    const a = JSON.parse(localStorage.getItem("bb_aim") || "null");
+    if (Array.isArray(a) && a.length === 2 && a[0] && a[1]) {
+      game.aim = [
+        { angle: clampAngle(a[0].angle), velocity: clampVel(a[0].velocity) },
+        { angle: clampAngle(a[1].angle), velocity: clampVel(a[1].velocity) }
+      ];
+    }
+  } catch (e) { /* ignore */ }
+
   el.angle.addEventListener("input", () => {
     el.angleValue.textContent = el.angle.value + "°";
+    rememberAim();
   });
   el.velocity.addEventListener("input", () => {
     el.velocityValue.textContent = el.velocity.value;
+    rememberAim();
   });
   el.throwBtn.addEventListener("click", onThrow);
+
+  // Push the given player's saved aim onto the sliders.
+  function applyAim(p) {
+    const a = game.aim[p];
+    el.angle.value = a.angle;
+    el.velocity.value = a.velocity;
+    el.angleValue.textContent = a.angle + "°";
+    el.velocityValue.textContent = a.velocity;
+  }
+
+  // Store the current slider values as the active player's aim.
+  function rememberAim() {
+    if (game.state !== STATE.WAITING) return;
+    game.aim[game.current] = {
+      angle: parseFloat(el.angle.value),
+      velocity: parseFloat(el.velocity.value)
+    };
+    saveAim();
+  }
   el.newRoundBtn.addEventListener("click", () => {
     if (game.state === STATE.TITLE) startMatch();
     else newRound();
@@ -207,6 +245,7 @@
     game.banana = null;
     game.explosion = null;
     game.state = STATE.WAITING;
+    applyAim(game.current);
     updateHUD();
     setControlsEnabled(true);
   }
@@ -215,6 +254,9 @@
     if (game.state !== STATE.WAITING) return;
     const angle = parseFloat(el.angle.value);
     const power = parseFloat(el.velocity.value);
+    // Save this player's aim so it returns next time it's their turn.
+    game.aim[game.current] = { angle, velocity: power };
+    saveAim();
     fireBanana(angle, power);
   }
 
@@ -248,6 +290,7 @@
   function switchTurn() {
     game.current = game.current === 0 ? 1 : 0;
     game.state = STATE.WAITING;
+    applyAim(game.current);
     updateHUD();
     setControlsEnabled(true);
   }
@@ -722,6 +765,12 @@
   function saveScores() {
     try { localStorage.setItem("bb_scores", JSON.stringify(game.scores)); } catch (e) {}
   }
+  function saveAim() {
+    try { localStorage.setItem("bb_aim", JSON.stringify(game.aim)); } catch (e) {}
+  }
+  function clamp(v, lo, hi) { v = Number(v); return isFinite(v) ? Math.min(hi, Math.max(lo, v)) : lo; }
+  function clampAngle(v) { return clamp(v, +el.angle.min, +el.angle.max); }
+  function clampVel(v) { return clamp(v, +el.velocity.min, +el.velocity.max); }
 
   // ================================================================
   //  BOOT
