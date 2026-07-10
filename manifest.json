@@ -1,0 +1,19 @@
+{
+  "name": "Banana Battle",
+  "short_name": "Banana Battle",
+  "description": "A retro DOS-style artillery duel. Lob bananas across a destructible skyline.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
