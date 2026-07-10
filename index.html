@@ -13,6 +13,19 @@
   <link rel="apple-touch-icon" href="icon.png" />
 
   <title>Banana Battle</title>
+  <meta name="description" content="A retro artillery duel — lob bananas across a destructible pixel skyline. First to 3 wins. Play free in your browser." />
+
+  <!-- Rich link previews when the game is shared (iMessage, socials) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Banana Battle 🍌" />
+  <meta property="og:description" content="Lob bananas across a destructible pixel skyline. Think you can beat me? Tap to play free." />
+  <meta property="og:image" content="https://michael480th.github.io/Banana-Battle/og-image.png" />
+  <meta property="og:url" content="https://michael480th.github.io/Banana-Battle/" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Banana Battle 🍌" />
+  <meta name="twitter:description" content="Lob bananas across a destructible pixel skyline. Think you can beat me?" />
+  <meta name="twitter:image" content="https://michael480th.github.io/Banana-Battle/og-image.png" />
+
   <link rel="stylesheet" href="styles.css" />
   <link rel="manifest" href="manifest.json" />
 </head>
@@ -41,10 +54,13 @@
 
       <div class="btnrow">
         <button id="throwButton">THROW</button>
+        <button id="shareButton" class="hidden">📲 SHARE RESULT</button>
         <button id="newRoundButton">NEW ROUND</button>
       </div>
     </section>
   </main>
+
+  <div id="toast" role="status" aria-live="polite"></div>
 
   <script src="game.js"></script>
 </body>

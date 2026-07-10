@@ -56,13 +56,17 @@
   const EXPLOSION_RADIUS = 18;
   const BANANA_R = 4;
 
+  // First player to this many round wins takes the match.
+  const MATCH_TARGET = 3;
+
   // ---- Game state machine --------------------------------------------
   const STATE = {
     TITLE: "TITLE",
     WAITING: "WAITING_FOR_INPUT",
     FLIGHT: "BANANA_IN_FLIGHT",
     EXPLOSION: "EXPLOSION",
-    ROUND_OVER: "ROUND_OVER"
+    ROUND_OVER: "ROUND_OVER",
+    MATCH_OVER: "MATCH_OVER"
   };
 
   const game = {
@@ -76,7 +80,10 @@
     explosion: null,
     sun: { x: VW / 2, y: 30, r: 12, shocked: 0 },
     winner: -1,
+    matchWinner: -1,
     titleT: 0,
+    confetti: [],
+    challenge: null,     // {a, b} score a friend is daring you to beat
     // Each player keeps their own last-used aim so the sliders snap back
     // to where they left off when the turn returns to them.
     aim: [
@@ -84,6 +91,14 @@
       { angle: 45, velocity: 60 }
     ]
   };
+
+  // A friend's shared link carries the winning score as ?c=A-B; show it
+  // as a challenge banner on the title screen.
+  try {
+    const c = new URLSearchParams(location.search).get("c");
+    const m = c && /^(\d{1,2})-(\d{1,2})$/.exec(c);
+    if (m) game.challenge = { a: +m[1], b: +m[2] };
+  } catch (e) { /* ignore */ }
 
   // Persisted scores
   try {
@@ -100,7 +115,9 @@
     velocityValue: document.getElementById("velocityValue"),
     wind: document.getElementById("wind"),
     throwBtn: document.getElementById("throwButton"),
-    newRoundBtn: document.getElementById("newRoundButton")
+    shareBtn: document.getElementById("shareButton"),
+    newRoundBtn: document.getElementById("newRoundButton"),
+    toast: document.getElementById("toast")
   };
 
   // Persisted per-player aim (so each player's last angle/power is remembered)
@@ -143,9 +160,12 @@
     saveAim();
   }
   el.newRoundBtn.addEventListener("click", () => {
-    if (game.state === STATE.TITLE) startMatch();
+    // START GAME (title), NEW MATCH (match over), or NEW ROUND (mid-match).
+    if (game.state === STATE.TITLE || game.state === STATE.MATCH_OVER) startMatch();
     else newRound();
   });
+
+  el.shareBtn.addEventListener("click", shareResult);
 
   // ================================================================
   //  WORLD GENERATION
@@ -230,6 +250,9 @@
   // ================================================================
   function startMatch() {
     game.scores = [0, 0];
+    game.matchWinner = -1;
+    game.winner = -1;
+    game.confetti = [];
     saveScores();
     newRound();
   }
@@ -299,7 +322,17 @@
     game.winner = winnerIdx;
     game.scores[winnerIdx]++;
     saveScores();
-    game.state = STATE.ROUND_OVER;
+
+    if (game.scores[winnerIdx] >= MATCH_TARGET) {
+      // Match point — someone has taken the whole match.
+      game.matchWinner = winnerIdx;
+      game.state = STATE.MATCH_OVER;
+      spawnConfetti();
+      beep(880, 0.5, "square", 0.06);
+    } else {
+      game.state = STATE.ROUND_OVER;
+    }
+
     setControlsEnabled(false);
     el.newRoundBtn.disabled = false;
     updateHUD();
@@ -470,6 +503,7 @@
     drawHUD();
 
     if (game.state === STATE.ROUND_OVER) drawRoundOver();
+    if (game.state === STATE.MATCH_OVER) drawMatchOver();
   }
 
   function drawSun() {
@@ -643,17 +677,93 @@
 
   function drawRoundOver() {
     ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.fillRect(0, VH / 2 - 34, VW, 68);
+    ctx.fillRect(0, VH / 2 - 40, VW, 80);
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillStyle = PAL.yellow;
     ctx.font = "bold 22px 'Courier New', monospace";
-    ctx.fillText("PLAYER " + (game.winner + 1) + " SCORES A HIT!", VW / 2, VH / 2 - 8);
+    ctx.fillText("PLAYER " + (game.winner + 1) + " SCORES A HIT!", VW / 2, VH / 2 - 14);
+    ctx.fillStyle = PAL.brightCyan;
+    ctx.font = "bold 16px 'Courier New', monospace";
+    ctx.fillText("MATCH: " + game.scores[0] + " — " + game.scores[1] +
+      "   (first to " + MATCH_TARGET + ")", VW / 2, VH / 2 + 8);
     ctx.fillStyle = PAL.white;
-    ctx.font = "13px 'Courier New', monospace";
-    ctx.fillText("Tap NEW ROUND to play on", VW / 2, VH / 2 + 16);
+    ctx.font = "12px 'Courier New', monospace";
+    ctx.fillText("Tap NEW ROUND to play on", VW / 2, VH / 2 + 28);
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
+  }
+
+  function drawMatchOver() {
+    // Raining bananas behind the panel
+    drawConfetti();
+
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillRect(0, VH / 2 - 58, VW, 116);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // blinking headline
+    const blink = Math.floor(game.titleT / 18) % 2 === 0;
+    ctx.fillStyle = blink ? PAL.yellow : PAL.brightGreen;
+    ctx.font = "bold 30px 'Courier New', monospace";
+    ctx.fillText("PLAYER " + (game.matchWinner + 1) + " WINS!", VW / 2, VH / 2 - 26);
+
+    ctx.fillStyle = PAL.white;
+    ctx.font = "bold 20px 'Courier New', monospace";
+    ctx.fillText("MATCH " + game.scores[0] + " — " + game.scores[1], VW / 2, VH / 2 + 4);
+
+    ctx.fillStyle = PAL.brightCyan;
+    ctx.font = "13px 'Courier New', monospace";
+    ctx.fillText("Tap SHARE to challenge a friend!", VW / 2, VH / 2 + 32);
+
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    game.titleT += 1; // drive the blink
+  }
+
+  // ---- Falling-banana confetti for the victory screen ----------------
+  function spawnConfetti() {
+    game.confetti = [];
+    for (let i = 0; i < 34; i++) game.confetti.push(newConfetto(true));
+  }
+  function newConfetto(anywhere) {
+    return {
+      x: randInt(0, VW),
+      y: anywhere ? randInt(-VH, VH) : randInt(-40, -8),
+      vy: 30 + Math.random() * 55,
+      vx: (Math.random() - 0.5) * 20,
+      spin: Math.random() * Math.PI * 2,
+      spinV: (Math.random() - 0.5) * 6,
+      scale: 0.8 + Math.random() * 0.8
+    };
+  }
+  function updateConfetti(dt) {
+    for (const c of game.confetti) {
+      c.y += c.vy * dt;
+      c.x += c.vx * dt;
+      c.spin += c.spinV * dt;
+      if (c.y > VH + 12) Object.assign(c, newConfetto(false)); // recycle
+    }
+  }
+  function drawConfetti() {
+    for (const c of game.confetti) {
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      ctx.rotate(c.spin);
+      ctx.scale(c.scale, c.scale);
+      ctx.fillStyle = PAL.yellow;
+      ctx.beginPath();
+      ctx.moveTo(-7, 1);
+      ctx.quadraticCurveTo(0, -9, 7, 1);
+      ctx.quadraticCurveTo(0, -3, -7, 1);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = PAL.brown;
+      ctx.fillRect(-8, -1, 2, 3);
+      ctx.fillRect(6, -1, 2, 3);
+      ctx.restore();
+    }
   }
 
   function drawTitle() {
@@ -672,7 +782,19 @@
 
     ctx.fillStyle = PAL.brightGreen;
     ctx.font = "14px 'Courier New', monospace";
-    ctx.fillText("An artillery duel for two players", VW / 2, VH / 2 + 4);
+    ctx.fillText("An artillery duel — first to " + MATCH_TARGET + " wins", VW / 2, VH / 2 + 4);
+
+    // Challenge banner if a friend's link brought us here
+    if (game.challenge) {
+      const c = game.challenge;
+      const pulse = Math.floor(game.titleT / 20) % 2 === 0;
+      ctx.fillStyle = pulse ? PAL.brightCyan : PAL.yellow;
+      ctx.font = "bold 15px 'Courier New', monospace";
+      ctx.fillText("🍌 A friend challenged you!", VW / 2, 60);
+      ctx.fillStyle = PAL.white;
+      ctx.font = "13px 'Courier New', monospace";
+      ctx.fillText("They won " + c.a + "–" + c.b + " — can you beat that?", VW / 2, 80);
+    }
 
     // little demo gorilla + banana
     const gy = VH / 2 + 40;
@@ -686,7 +808,7 @@
     if (Math.floor(game.titleT / 30) % 2 === 0) {
       ctx.fillStyle = PAL.white;
       ctx.font = "16px 'Courier New', monospace";
-      ctx.fillText("Press NEW ROUND to begin", VW / 2, VH - 30);
+      ctx.fillText("Tap START GAME to begin", VW / 2, VH - 30);
     }
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
@@ -699,32 +821,61 @@
     el.wind.textContent = "WIND: " + (game.wind > 0 ? "+" : "") + game.wind +
       (game.wind === 0 ? "" : game.wind > 0 ? "  →" : "  ←");
 
-    if (game.state === STATE.ROUND_OVER) {
-      el.status.innerHTML = "PLAYER " + (game.winner + 1) + " WINS THE ROUND! " +
+    const S = game.state;
+    if (S === STATE.MATCH_OVER) {
+      el.status.innerHTML = "PLAYER " + (game.matchWinner + 1) + " WINS THE MATCH! " +
         "&nbsp; " + game.scores[0] + " &ndash; " + game.scores[1];
+    } else if (S === STATE.ROUND_OVER) {
+      el.status.innerHTML = "PLAYER " + (game.winner + 1) + " WINS THE ROUND! " +
+        "&nbsp; " + game.scores[0] + " &ndash; " + game.scores[1] +
+        "&nbsp; (first to " + MATCH_TARGET + ")";
+    } else if (S === STATE.TITLE) {
+      el.status.textContent = "BANANA BATTLE — first to " + MATCH_TARGET + " wins";
     } else {
       el.status.textContent =
         "PLAYER " + (game.current + 1) + " — TAKE AIM   [" +
         game.scores[0] + " : " + game.scores[1] + "]";
     }
 
-    // NEW ROUND is the primary action only when a round has ended (or on the
-    // title screen); otherwise THROW is the button to press.
-    const newRoundIsPrimary =
-      (game.state === STATE.ROUND_OVER || game.state === STATE.TITLE);
-    el.newRoundBtn.classList.toggle("is-primary", newRoundIsPrimary);
+    updateButtons();
+  }
+
+  // Show/label/emphasize the three buttons based on the current state.
+  function updateButtons() {
+    const S = game.state;
+    const title = (S === STATE.TITLE);
+    const matchOver = (S === STATE.MATCH_OVER);
+
+    // Visibility: THROW only during a live match; SHARE only at title/match end.
+    el.throwBtn.classList.toggle("hidden", title || matchOver);
+    el.shareBtn.classList.toggle("hidden", !(title || matchOver));
+
+    // Labels
     el.newRoundBtn.textContent =
-      game.state === STATE.TITLE ? "START GAME" : "NEW ROUND";
+      title ? "START GAME" : matchOver ? "NEW MATCH" : "NEW ROUND";
+    el.shareBtn.textContent =
+      matchOver ? "📲 SHARE RESULT" : "📲 INVITE A FRIEND";
+
+    // Primary emphasis: SHARE at match end; otherwise NEW ROUND when a round
+    // has ended or on the title screen; THROW is inherently primary in play.
+    el.shareBtn.classList.toggle("is-primary", matchOver);
+    el.newRoundBtn.classList.toggle(
+      "is-primary",
+      (S === STATE.ROUND_OVER || title)
+    );
   }
 
   function setControlsEnabled(on) {
     el.angle.disabled = !on;
     el.velocity.disabled = !on;
     el.throwBtn.disabled = !on;
-    el.newRoundBtn.disabled = (game.state === STATE.WAITING) ? false : el.newRoundBtn.disabled;
-    if (game.state === STATE.ROUND_OVER || game.state === STATE.TITLE) {
-      el.newRoundBtn.disabled = false;
-    }
+    // NEW ROUND / START GAME / NEW MATCH is tappable whenever we're not
+    // mid-flight (i.e. waiting, or any end-of-round/match/title screen).
+    const canAdvance = (game.state === STATE.WAITING ||
+                        game.state === STATE.ROUND_OVER ||
+                        game.state === STATE.MATCH_OVER ||
+                        game.state === STATE.TITLE);
+    el.newRoundBtn.disabled = !canAdvance;
   }
 
   // ================================================================
@@ -743,6 +894,8 @@
     if (game.state === STATE.FLIGHT) updateFlight(dt);
     else if (game.state === STATE.EXPLOSION && game.explosion && !game.explosion.silent) {
       updateExplosion(dt);
+    } else if (game.state === STATE.MATCH_OVER) {
+      updateConfetti(dt);
     }
 
     render();
@@ -780,6 +933,53 @@
       osc.start(t);
       osc.stop(t + dur);
     } catch (e) { /* ignore */ }
+  }
+
+  // ================================================================
+  //  SHARING  (Web Share API -> native iOS share sheet; clipboard fallback)
+  // ================================================================
+  function shareUrl() {
+    // Point at wherever this is hosted, minus any existing query/hash.
+    const base = location.origin + location.pathname;
+    if (game.state === STATE.MATCH_OVER) {
+      return base + "?c=" + game.scores[0] + "-" + game.scores[1];
+    }
+    return base;
+  }
+
+  function shareMessage() {
+    if (game.state === STATE.MATCH_OVER) {
+      return "🍌 Player " + (game.matchWinner + 1) + " just won Banana Battle " +
+        game.scores[0] + "–" + game.scores[1] + "! Think you can beat me?";
+    }
+    return "🍌 Come play Banana Battle with me — lob bananas across a pixel skyline and blow up buildings!";
+  }
+
+  function shareResult() {
+    ensureAudio();
+    beep(760, 0.08, "square", 0.05);
+    const url = shareUrl();
+    const text = shareMessage();
+    const data = { title: "Banana Battle", text: text, url: url };
+
+    if (navigator.share) {
+      navigator.share(data).catch(() => { /* user cancelled — ignore */ });
+    } else if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text + " " + url)
+        .then(() => showToast("Link copied — paste it to a friend!"))
+        .catch(() => showToast(url));
+    } else {
+      showToast(url);
+    }
+  }
+
+  let toastTimer = null;
+  function showToast(msg) {
+    if (!el.toast) return;
+    el.toast.textContent = msg;
+    el.toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.toast.classList.remove("show"), 2600);
   }
 
   // ================================================================
