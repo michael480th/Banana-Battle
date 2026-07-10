@@ -450,6 +450,13 @@
   function carveHole(x, y, r) {
     tctx.save();
     tctx.globalCompositeOperation = "destination-out";
+    // For destination-out only the SOURCE alpha matters. We must force a
+    // fully-opaque fill here, otherwise a leftover semi-transparent
+    // fillStyle/globalAlpha from paintTerrain would only erase part of the
+    // pixels — leaving the building intact with a faint lightened patch
+    // instead of a real hole.
+    tctx.globalAlpha = 1;
+    tctx.fillStyle = "#000";
     tctx.beginPath();
     tctx.arc(x, y, r, 0, Math.PI * 2);
     tctx.fill();
