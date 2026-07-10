@@ -91,7 +91,9 @@ canvas {
   #status { padding: 2px 0 6px; font-size: 16px; }
   label { margin: 8px 0; }
   #wind { padding: 2px 0 8px; }
-  button { padding: 12px 6px; font-size: 16px; }
+  #throwButton { padding: 16px; font-size: 20px; }
+  #newRoundButton { margin-top: 14px; padding: 8px 18px; font-size: 12px; }
+  #newRoundButton.is-primary { padding: 12px 20px; font-size: 16px; }
 }
 
 #status {
@@ -172,30 +174,66 @@ input[type="range"]::-moz-range-thumb {
   letter-spacing: 1px;
 }
 
+/* Stack the buttons and separate them so NEW ROUND can't be hit by
+   accident while aiming. */
 .btnrow {
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  align-items: stretch;
 }
 
 button {
-  flex: 1;
-  margin-top: 4px;
-  padding: 16px 8px;
   font-family: "Courier New", Courier, monospace;
-  font-size: 18px;
   font-weight: bold;
   letter-spacing: 1px;
-  background: #C0C0C0;
-  color: #000;
-  border: 2px solid #fff;
   cursor: pointer;
 }
 
-button:active {
+/* THROW — the primary action: big, bright, unmissable. */
+#throwButton {
+  order: 1;
+  width: 100%;
+  padding: 22px;
+  font-size: 24px;
   background: #FFFF55;
+  color: #000;
+  border: 3px solid #fff;
+}
+
+#throwButton:active {
+  background: #55FF55;
+}
+
+/* NEW ROUND — secondary: smaller, muted, and pushed well clear of THROW. */
+#newRoundButton {
+  order: 2;
+  align-self: center;
+  width: auto;
+  min-width: 160px;
+  margin-top: 22px;
+  padding: 9px 22px;
+  font-size: 13px;
+  background: #161616;
+  color: #8a8a8a;
+  border: 2px solid #444;
+}
+
+#newRoundButton:active {
+  background: #333;
+}
+
+/* When the round is over (or on the title screen) NEW ROUND becomes the
+   action to take, so light it up like the primary button. */
+#newRoundButton.is-primary {
+  background: #FFFF55;
+  color: #000;
+  border-color: #fff;
+  font-size: 18px;
+  padding: 16px 22px;
+  min-width: 220px;
 }
 
 button:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: default;
 }

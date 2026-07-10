@@ -707,6 +707,14 @@
         "PLAYER " + (game.current + 1) + " — TAKE AIM   [" +
         game.scores[0] + " : " + game.scores[1] + "]";
     }
+
+    // NEW ROUND is the primary action only when a round has ended (or on the
+    // title screen); otherwise THROW is the button to press.
+    const newRoundIsPrimary =
+      (game.state === STATE.ROUND_OVER || game.state === STATE.TITLE);
+    el.newRoundBtn.classList.toggle("is-primary", newRoundIsPrimary);
+    el.newRoundBtn.textContent =
+      game.state === STATE.TITLE ? "START GAME" : "NEW ROUND";
   }
 
   function setControlsEnabled(on) {
@@ -793,7 +801,7 @@
   // ================================================================
   //  BOOT
   // ================================================================
-  el.newRoundBtn.disabled = false;
+  setControlsEnabled(false);   // title screen: only START GAME is active
   updateHUD();
   requestAnimationFrame(loop);
 })();
