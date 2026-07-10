@@ -585,15 +585,33 @@
       ctx.fillStyle = `rgba(255,255,85,${a * 0.5})`;
       ctx.fillRect(p.x | 0, p.y | 0, 2, 2);
     }
-    // spinning banana: a little rotating yellow crescent-ish block
+    // spinning banana: a curved crescent with brown tips
     ctx.save();
     ctx.translate(b.x, b.y);
     ctx.rotate(b.spin);
+
+    // yellow crescent body (outer curve up top, inner curve underneath)
     ctx.fillStyle = PAL.yellow;
-    ctx.fillRect(-4, -2, 8, 4);
+    ctx.beginPath();
+    ctx.moveTo(-7, 1);
+    ctx.quadraticCurveTo(0, -9, 7, 1);   // outer (top) edge
+    ctx.quadraticCurveTo(0, -3, -7, 1);  // inner (bottom) edge
+    ctx.closePath();
+    ctx.fill();
+
+    // ridge/shadow along the inside for a bit of depth
+    ctx.strokeStyle = "rgba(120,60,0,0.55)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-5.5, 0.3);
+    ctx.quadraticCurveTo(0, -3.6, 5.5, 0.3);
+    ctx.stroke();
+
+    // brown tips at each end
     ctx.fillStyle = PAL.brown;
-    ctx.fillRect(3, -2, 1, 4);
-    ctx.fillRect(-4, -2, 1, 4);
+    ctx.fillRect(-8, -1, 2, 3);
+    ctx.fillRect(6, -1, 2, 3);
+
     ctx.restore();
   }
 
