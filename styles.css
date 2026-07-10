@@ -94,6 +94,8 @@ canvas {
   #throwButton { padding: 16px; font-size: 20px; }
   #newRoundButton { margin-top: 14px; padding: 8px 18px; font-size: 12px; }
   #newRoundButton.is-primary { padding: 12px 20px; font-size: 16px; }
+  #shareButton { padding: 8px 18px; font-size: 12px; }
+  #shareButton.is-primary { padding: 14px; font-size: 18px; }
 }
 
 #status {
@@ -204,6 +206,43 @@ button {
   background: #55FF55;
 }
 
+/* SHARE — secondary by default (title "invite"), primary at match end.
+   Green accent so it reads as the celebratory "spread the word" action. */
+#shareButton {
+  order: 1;
+  align-self: center;
+  width: auto;
+  min-width: 160px;
+  padding: 10px 22px;
+  font-size: 14px;
+  background: #12351a;
+  color: #8fdc9f;
+  border: 2px solid #2f6b3f;
+}
+
+#shareButton.is-primary {
+  width: 100%;
+  align-self: stretch;
+  padding: 22px;
+  font-size: 22px;
+  background: #55FF55;
+  color: #000;
+  border: 3px solid #fff;
+}
+
+#shareButton:active {
+  background: #2f6b3f;
+}
+
+#shareButton.is-primary:active {
+  background: #33cc55;
+}
+
+/* Utility */
+.hidden {
+  display: none !important;
+}
+
 /* NEW ROUND — secondary: smaller, muted, and pushed well clear of THROW. */
 #newRoundButton {
   order: 2;
@@ -236,4 +275,31 @@ button {
 button:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+/* Toast for the desktop "link copied" fallback */
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  transform: translateX(-50%) translateY(20px);
+  max-width: 88vw;
+  padding: 12px 18px;
+  background: #FFFF55;
+  color: #000;
+  font-family: "Courier New", Courier, monospace;
+  font-weight: bold;
+  font-size: 14px;
+  border: 2px solid #000;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 50;
+}
+
+#toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
