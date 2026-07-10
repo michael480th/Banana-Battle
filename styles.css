@@ -277,6 +277,20 @@ button:disabled {
   cursor: default;
 }
 
+/* Keyboard hint — only shown on devices with a real pointer/keyboard. */
+#kbhint {
+  display: none;
+  margin-top: 14px;
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #7a7a7a;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  #kbhint { display: block; }
+}
+
 /* Toast for the desktop "link copied" fallback */
 #toast {
   position: fixed;

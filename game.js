@@ -167,6 +167,53 @@
 
   el.shareBtn.addEventListener("click", shareResult);
 
+  // ---- Keyboard controls (laptop / desktop) --------------------------
+  //   Left / Right arrows  -> angle
+  //   Up / Down arrows     -> power
+  //   Space / Enter        -> throw (or advance on title / round / match end)
+  document.addEventListener("keydown", onKey);
+
+  function onKey(e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = e.key;
+
+    // Space / Enter: throw during play, or press the primary "advance" action.
+    if (k === " " || k === "Spacebar" || k === "Enter") {
+      if (game.state === STATE.WAITING) {
+        e.preventDefault();
+        ensureAudio();
+        onThrow();
+      } else if (game.state === STATE.TITLE || game.state === STATE.MATCH_OVER) {
+        e.preventDefault();
+        startMatch();
+      } else if (game.state === STATE.ROUND_OVER) {
+        e.preventDefault();
+        newRound();
+      }
+      return;
+    }
+
+    // Arrow keys only steer while it's a player's turn to aim.
+    if (game.state !== STATE.WAITING) return;
+    switch (k) {
+      case "ArrowLeft":  nudge(el.angle, -1); break;
+      case "ArrowRight": nudge(el.angle, +1); break;
+      case "ArrowUp":    nudge(el.velocity, +1); break;
+      case "ArrowDown":  nudge(el.velocity, -1); break;
+      default: return;
+    }
+    e.preventDefault();
+  }
+
+  // Adjust a range input and fire its "input" event so the label + saved
+  // aim update through the existing handlers.
+  function nudge(input, delta) {
+    const v = clamp(+input.value + delta, +input.min, +input.max);
+    if (v === +input.value) return;
+    input.value = v;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
   // ================================================================
   //  WORLD GENERATION
   // ================================================================
