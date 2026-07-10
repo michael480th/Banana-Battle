@@ -547,6 +547,9 @@
     // 6. gorillas
     for (let i = 0; i < 2; i++) drawGorilla(game.gorillas[i], i);
 
+    // 6b. aim preview (angle/power + arrow) while it's a player's turn
+    if (game.state === STATE.WAITING) drawAim();
+
     // 7. banana
     if (game.banana && game.banana.active) drawBanana(game.banana);
 
@@ -617,6 +620,66 @@
     ctx.lineTo(cx + len * dir - 4 * dir, y + 3);
     ctx.closePath();
     ctx.fill();
+  }
+
+  // Live aim preview: a dashed arrow from the active gorilla in the shot's
+  // direction (length grows with power) plus an angle/power readout. Updates
+  // instantly for both the sliders and the keyboard, so keyboard aiming is
+  // clearly reflected on the canvas itself.
+  function drawAim() {
+    const g = game.gorillas[game.current];
+    if (!g || !g.alive) return;
+
+    const angle = +el.angle.value;
+    const power = +el.velocity.value;
+    const effAngle = game.current === 1 ? (180 - angle) : angle;
+    const rad = effAngle * Math.PI / 180;
+
+    const sx = g.x + g.width / 2;
+    const sy = g.y - 4;
+    const len = 16 + power * 0.5;
+    const ex = sx + Math.cos(rad) * len;
+    const ey = sy - Math.sin(rad) * len;
+
+    // dashed aim line
+    ctx.save();
+    ctx.strokeStyle = PAL.white;
+    ctx.lineWidth = 1;
+    if (ctx.setLineDash) ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+    if (ctx.setLineDash) ctx.setLineDash([]);
+
+    // arrowhead
+    const ah = 5;
+    const back = rad + Math.PI;
+    ctx.fillStyle = PAL.yellow;
+    ctx.beginPath();
+    ctx.moveTo(ex, ey);
+    ctx.lineTo(ex + Math.cos(back + 0.4) * ah, ey - Math.sin(back + 0.4) * ah);
+    ctx.lineTo(ex + Math.cos(back - 0.4) * ah, ey - Math.sin(back - 0.4) * ah);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // angle/power readout, kept on-screen above the gorilla
+    ctx.save();
+    ctx.font = "bold 11px 'Courier New', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    const label = angle + "°  PWR " + power;
+    const tx = Math.max(42, Math.min(VW - 42, sx));
+    const ty = Math.max(24, g.y - 14);
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    const w = ctx.measureText(label).width + 8;
+    ctx.fillRect(tx - w / 2, ty - 12, w, 13);
+    ctx.fillStyle = PAL.brightCyan;
+    ctx.fillText(label, tx, ty);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.restore();
   }
 
   function drawGorilla(g, idx) {
