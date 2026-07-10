@@ -92,6 +92,13 @@
     ]
   };
 
+  // Faint drifting clouds that visualize the wind (speed + direction).
+  const clouds = [0, 1, 2].map(() => ({
+    x: Math.random() * VW,
+    y: 22 + Math.random() * 90,
+    s: 0.7 + Math.random() * 0.9
+  }));
+
   // A friend's shared link carries the winning score as ?c=A-B; show it
   // as a challenge banner on the title screen.
   try {
@@ -535,6 +542,9 @@
       return;
     }
 
+    // 1b. clouds drifting in the wind (behind everything else)
+    drawClouds();
+
     // 2. sun
     drawSun();
 
@@ -598,6 +608,42 @@
       ctx.fillRect(s.x - 4, s.y + 3, 1, 1);
       ctx.fillRect(s.x + 3, s.y + 3, 1, 1);
     }
+  }
+
+  // Clouds drift in the wind's direction at a speed set by its strength.
+  function updateClouds(dt) {
+    const vx = game.wind * 5; // px/s; 0 wind => calm, still clouds
+    for (const c of clouds) {
+      c.x += vx * dt;
+      const w = 34 * c.s;
+      if (c.x > VW + w) c.x = -w;
+      else if (c.x < -w) c.x = VW + w;
+    }
+  }
+
+  function drawClouds() {
+    for (const c of clouds) drawCloud(c.x, c.y, c.s);
+  }
+
+  function drawCloud(x, y, s) {
+    // A faint, flat-bottomed cloud built as one union path so overlapping
+    // puffs don't darken each other — stays soft and low-contrast.
+    const puffs = [
+      [0, 0, 10], [12, 2, 8], [-12, 2, 8],
+      [6, -4, 7], [-6, -4, 7], [22, 3, 6], [-22, 3, 6]
+    ];
+    ctx.save();
+    ctx.fillStyle = "rgba(105,105,120,0.20)";
+    ctx.beginPath();
+    for (const [dx, dy, r] of puffs) {
+      const cx = x + dx * s, cy = y + dy * s, rr = r * s;
+      ctx.moveTo(cx + rr, cy);
+      ctx.arc(cx, cy, rr, 0, Math.PI * 2);
+    }
+    // flat base
+    ctx.rect(x - 26 * s, y + 2 * s, 52 * s, 6 * s);
+    ctx.fill();
+    ctx.restore();
   }
 
   function drawWind() {
@@ -1007,6 +1053,8 @@
 
     // decay sun expression
     if (game.sun.shocked > 0) game.sun.shocked = Math.max(0, game.sun.shocked - dt);
+
+    updateClouds(dt);
 
     if (game.state === STATE.FLIGHT) updateFlight(dt);
     else if (game.state === STATE.EXPLOSION && game.explosion && !game.explosion.silent) {
