@@ -65,6 +65,7 @@
     WAITING: "WAITING_FOR_INPUT",
     FLIGHT: "BANANA_IN_FLIGHT",
     EXPLOSION: "EXPLOSION",
+    CELEBRATE: "CELEBRATE",     // brief first-shot-KO fanfare before round/match over
     ROUND_OVER: "ROUND_OVER",
     MATCH_OVER: "MATCH_OVER"
   };
@@ -76,6 +77,8 @@
     current: 0,          // 0 or 1
     wind: 0,
     scores: [0, 0],
+    shots: [0, 0],       // total throws per player this match
+    roundShots: [0, 0],  // throws per player in the current round
     banana: null,
     explosion: null,
     sun: { x: VW / 2, y: 30, r: 12, shocked: 0 },
@@ -83,7 +86,9 @@
     matchWinner: -1,
     titleT: 0,
     confetti: [],
-    challenge: null,     // {a, b} score a friend is daring you to beat
+    confettiRainbow: false,
+    celebrate: null,     // { winner, t } during a first-shot KO fanfare
+    challenge: null,     // {a, b, s} score + shots a friend is daring you to beat
     // Each player keeps their own last-used aim so the sliders snap back
     // to where they left off when the turn returns to them.
     aim: [
@@ -102,9 +107,13 @@
   // A friend's shared link carries the winning score as ?c=A-B; show it
   // as a challenge banner on the title screen.
   try {
-    const c = new URLSearchParams(location.search).get("c");
+    const params = new URLSearchParams(location.search);
+    const c = params.get("c");
     const m = c && /^(\d{1,2})-(\d{1,2})$/.exec(c);
-    if (m) game.challenge = { a: +m[1], b: +m[2] };
+    if (m) {
+      const s = parseInt(params.get("s"), 10);
+      game.challenge = { a: +m[1], b: +m[2], s: isFinite(s) && s > 0 ? s : null };
+    }
   } catch (e) { /* ignore */ }
 
   // Persisted scores
@@ -309,9 +318,11 @@
   // ================================================================
   function startMatch() {
     game.scores = [0, 0];
+    game.shots = [0, 0];
     game.matchWinner = -1;
     game.winner = -1;
     game.confetti = [];
+    game.celebrate = null;
     saveScores();
     newRound();
   }
@@ -321,11 +332,13 @@
     paintTerrain();
     placeGorillas();
     game.wind = randInt(-8, 8);
+    game.roundShots = [0, 0];
     // Loser of last round (or player 0 at start) begins
     game.current = (game.winner === 1) ? 0 : (game.winner === 0 ? 1 : 0);
     game.winner = -1;
     game.banana = null;
     game.explosion = null;
+    game.celebrate = null;
     game.state = STATE.WAITING;
     applyAim(game.current);
     updateHUD();
@@ -343,6 +356,9 @@
   }
 
   function fireBanana(angle, power) {
+    game.shots[game.current]++;
+    game.roundShots[game.current]++;
+
     const g = game.gorillas[game.current];
     // Player 2 (right) mirrors the angle so "higher slider = more up
     // and toward the opponent" for both players.
@@ -499,10 +515,39 @@
       if (hit >= 0) {
         game.gorillas[hit].alive = false;
         const winner = hit === 0 ? 1 : 0;
-        winRound(winner);
+        const thrower = game.current;
+        // A one-shot KO: you hit the OPPONENT (not yourself) on your very
+        // first throw of the round. Play a rainbow fanfare first.
+        const oneShotKO = hit !== thrower && game.roundShots[thrower] === 1;
+        if (oneShotKO) startCelebration(winner);
+        else winRound(winner);
       } else {
         switchTurn();
       }
+    }
+  }
+
+  // First-shot-KO fanfare: rainbow bananas + message, then continue to the
+  // normal round/match-over outcome.
+  function startCelebration(winner) {
+    game.celebrate = { winner, t: 0 };
+    game.state = STATE.CELEBRATE;
+    spawnConfetti(true); // rainbow
+    setControlsEnabled(false);
+    beep(880, 0.12, "square", 0.06);
+    setTimeout(() => beep(1174, 0.14, "square", 0.06), 130);
+    setTimeout(() => beep(1568, 0.2, "square", 0.06), 280);
+  }
+
+  function updateCelebration(dt) {
+    const c = game.celebrate;
+    if (!c) return;
+    c.t += dt;
+    updateConfetti(dt);
+    if (c.t > 1.8) {
+      const winner = c.winner;
+      game.celebrate = null;
+      winRound(winner); // -> ROUND_OVER or MATCH_OVER (which resets confetti)
     }
   }
 
@@ -574,8 +619,34 @@
     // 9. HUD text
     drawHUD();
 
+    if (game.state === STATE.CELEBRATE) drawCelebration();
     if (game.state === STATE.ROUND_OVER) drawRoundOver();
     if (game.state === STATE.MATCH_OVER) drawMatchOver();
+  }
+
+  function drawCelebration() {
+    drawConfetti(); // rainbow bananas raining
+
+    const t = game.celebrate ? game.celebrate.t : 0;
+    const w = game.celebrate ? game.celebrate.winner : 0;
+
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fillRect(0, VH / 2 - 40, VW, 80);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // headline cycles through the rainbow
+    const col = RAINBOW[Math.floor(t * 10) % RAINBOW.length];
+    ctx.fillStyle = col;
+    ctx.font = "bold 30px 'Courier New', monospace";
+    ctx.fillText("ONE-SHOT KO!", VW / 2, VH / 2 - 14);
+
+    ctx.fillStyle = PAL.white;
+    ctx.font = "bold 15px 'Courier New', monospace";
+    ctx.fillText("Player " + (w + 1) + " nailed it on the first try!", VW / 2, VH / 2 + 14);
+
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
   }
 
   function drawSun() {
@@ -840,6 +911,14 @@
     ctx.textAlign = "right";
     ctx.fillStyle = (game.state === STATE.WAITING && game.current === 1) ? PAL.white : PAL.brightMagenta;
     ctx.fillText("P2: " + game.scores[1] + (game.current === 1 && game.state === STATE.WAITING ? " ◀" : ""), VW - 6, 6);
+
+    // shot counts under each score: this round · match total
+    ctx.font = "9px 'Courier New', monospace";
+    ctx.fillStyle = PAL.gray;
+    ctx.textAlign = "left";
+    ctx.fillText("shots " + game.roundShots[0] + " · " + game.shots[0], 6, 20);
+    ctx.textAlign = "right";
+    ctx.fillText("shots " + game.roundShots[1] + " · " + game.shots[1], VW - 6, 20);
     ctx.textAlign = "left";
   }
 
@@ -879,23 +958,34 @@
 
     ctx.fillStyle = PAL.white;
     ctx.font = "bold 20px 'Courier New', monospace";
-    ctx.fillText("MATCH " + game.scores[0] + " — " + game.scores[1], VW / 2, VH / 2 + 4);
+    ctx.fillText("MATCH " + game.scores[0] + " — " + game.scores[1], VW / 2, VH / 2 - 2);
+
+    const ws = game.shots[game.matchWinner];
+    ctx.fillStyle = PAL.yellow;
+    ctx.font = "13px 'Courier New', monospace";
+    ctx.fillText("won " + game.scores[game.matchWinner] + " games in " + ws +
+      " shot" + (ws === 1 ? "" : "s"), VW / 2, VH / 2 + 22);
 
     ctx.fillStyle = PAL.brightCyan;
-    ctx.font = "13px 'Courier New', monospace";
-    ctx.fillText("Tap SHARE to challenge a friend!", VW / 2, VH / 2 + 32);
+    ctx.font = "12px 'Courier New', monospace";
+    ctx.fillText("Tap SHARE to challenge a friend!", VW / 2, VH / 2 + 42);
 
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
     game.titleT += 1; // drive the blink
   }
 
-  // ---- Falling-banana confetti for the victory screen ----------------
-  function spawnConfetti() {
+  // ---- Falling-banana confetti (victory + first-shot fanfare) --------
+  const RAINBOW = [
+    PAL.brightRed, "#FFAA00", PAL.yellow, PAL.brightGreen,
+    PAL.brightCyan, PAL.brightBlue, PAL.brightMagenta
+  ];
+  function spawnConfetti(rainbow) {
+    game.confettiRainbow = !!rainbow;
     game.confetti = [];
-    for (let i = 0; i < 34; i++) game.confetti.push(newConfetto(true));
+    for (let i = 0; i < 36; i++) game.confetti.push(newConfetto(true, i));
   }
-  function newConfetto(anywhere) {
+  function newConfetto(anywhere, i) {
     return {
       x: randInt(0, VW),
       y: anywhere ? randInt(-VH, VH) : randInt(-40, -8),
@@ -903,15 +993,17 @@
       vx: (Math.random() - 0.5) * 20,
       spin: Math.random() * Math.PI * 2,
       spinV: (Math.random() - 0.5) * 6,
-      scale: 0.8 + Math.random() * 0.8
+      scale: 0.8 + Math.random() * 0.8,
+      color: game.confettiRainbow ? RAINBOW[(i | 0) % RAINBOW.length] : PAL.yellow
     };
   }
   function updateConfetti(dt) {
-    for (const c of game.confetti) {
+    for (let i = 0; i < game.confetti.length; i++) {
+      const c = game.confetti[i];
       c.y += c.vy * dt;
       c.x += c.vx * dt;
       c.spin += c.spinV * dt;
-      if (c.y > VH + 12) Object.assign(c, newConfetto(false)); // recycle
+      if (c.y > VH + 12) { const col = c.color; Object.assign(c, newConfetto(false, i)); c.color = col; }
     }
   }
   function drawConfetti() {
@@ -920,7 +1012,7 @@
       ctx.translate(c.x, c.y);
       ctx.rotate(c.spin);
       ctx.scale(c.scale, c.scale);
-      ctx.fillStyle = PAL.yellow;
+      ctx.fillStyle = c.color || PAL.yellow;
       ctx.beginPath();
       ctx.moveTo(-7, 1);
       ctx.quadraticCurveTo(0, -9, 7, 1);
@@ -961,7 +1053,9 @@
       ctx.fillText("🍌 A friend challenged you!", VW / 2, 60);
       ctx.fillStyle = PAL.white;
       ctx.font = "13px 'Courier New', monospace";
-      ctx.fillText("They won " + c.a + "–" + c.b + " — can you beat that?", VW / 2, 80);
+      const feat = c.s ? ("They won " + c.a + "–" + c.b + " in " + c.s + " shots")
+                       : ("They won " + c.a + "–" + c.b);
+      ctx.fillText(feat + " — can you beat that?", VW / 2, 80);
     }
 
     // little demo gorilla + banana
@@ -991,8 +1085,10 @@
 
     const S = game.state;
     if (S === STATE.MATCH_OVER) {
+      const ws = game.shots[game.matchWinner];
       el.status.innerHTML = "PLAYER " + (game.matchWinner + 1) + " WINS THE MATCH! " +
-        "&nbsp; " + game.scores[0] + " &ndash; " + game.scores[1];
+        "&nbsp; " + game.scores[0] + " &ndash; " + game.scores[1] +
+        "&nbsp; · " + ws + " shot" + (ws === 1 ? "" : "s");
     } else if (S === STATE.ROUND_OVER) {
       el.status.innerHTML = "PLAYER " + (game.winner + 1) + " WINS THE ROUND! " +
         "&nbsp; " + game.scores[0] + " &ndash; " + game.scores[1] +
@@ -1064,6 +1160,8 @@
     if (game.state === STATE.FLIGHT) updateFlight(dt);
     else if (game.state === STATE.EXPLOSION && game.explosion && !game.explosion.silent) {
       updateExplosion(dt);
+    } else if (game.state === STATE.CELEBRATE) {
+      updateCelebration(dt);
     } else if (game.state === STATE.MATCH_OVER) {
       updateConfetti(dt);
     }
@@ -1112,15 +1210,18 @@
     // Point at wherever this is hosted, minus any existing query/hash.
     const base = location.origin + location.pathname;
     if (game.state === STATE.MATCH_OVER) {
-      return base + "?c=" + game.scores[0] + "-" + game.scores[1];
+      return base + "?c=" + game.scores[0] + "-" + game.scores[1] +
+        "&s=" + game.shots[game.matchWinner];
     }
     return base;
   }
 
   function shareMessage() {
     if (game.state === STATE.MATCH_OVER) {
+      const ws = game.shots[game.matchWinner];
       return "🍌 Player " + (game.matchWinner + 1) + " just won Banana Battle " +
-        game.scores[0] + "–" + game.scores[1] + "! Think you can beat me?";
+        game.scores[0] + "–" + game.scores[1] + " in " + ws + " shot" +
+        (ws === 1 ? "" : "s") + "! Think you can beat me?";
     }
     return "🍌 Come play Banana Battle with me — lob bananas across a pixel skyline and blow up buildings!";
   }
